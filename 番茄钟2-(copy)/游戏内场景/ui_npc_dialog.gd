@@ -2,7 +2,6 @@ extends Control
 
 # ========== 编辑器可配置参数 ==========
 @export var dialog_label: Label
-# 角色节点，在【主场景】里手动拖入
 @export var character_node: Node3D
 
 # 待机台词库 - idle动画时播放
@@ -45,7 +44,7 @@ func _ready():
 		print("✅ dialog_label 绑定成功")
 		dialog_label.visible = false
 	
-	# 初始化定时器
+	# 先创建并添加定时器到场景树
 	_dialog_timer = Timer.new()
 	_dialog_timer.one_shot = true
 	_dialog_timer.timeout.connect(_show_next_dialog)
@@ -54,10 +53,10 @@ func _ready():
 	_check_timer = Timer.new()
 	_check_timer.wait_time = check_interval
 	_check_timer.timeout.connect(_check_character_state)
-	_check_timer.start()
 	add_child(_check_timer)
+	_check_timer.start()  # 加入树之后再启动
 	
-	# 如果绑定了角色，就获取动画树
+	# 获取角色动画树
 	if character_node:
 		_anim_tree = character_node.get_node_or_null("AnimationTree")
 		if _anim_tree:
@@ -67,21 +66,33 @@ func _ready():
 	else:
 		print("⚠️ 未绑定角色节点，默认待机台词")
 	
-	# 启动对话循环
+	# 最后启动对话循环
 	_start_dialog_cycle()
 
 # ========== 检测动画状态 ==========
 func _check_character_state() -> void:
+	# 检查动画树是否有效
 	if not _anim_tree:
 		return
 	
+	# 检查是否有 playback 参数
+	if not _anim_tree.has("parameters/playback"):
+		return
+	
+	# 安全获取 playback
 	var playback = _anim_tree.get("parameters/playback")
 	if not playback:
 		return
 	
-	var current_state = playback.get_current_node()
-	var now_idle = (current_state == "idle")
+	# 安全检查：判断是否有 get_current_node 方法
+	if not playback.has_method("get_current_node"):
+		return
 	
+	# 获取当前状态
+	var current_state: String = playback.get_current_node()
+	
+	# 判断是否为 idle
+	var now_idle = (current_state == "idle")
 	if now_idle != _is_idle:
 		_is_idle = now_idle
 		print("状态切换：", "待机台词" if _is_idle else "计时台词")
@@ -90,7 +101,7 @@ func _check_character_state() -> void:
 
 # ========== 对话循环 ==========
 func _start_dialog_cycle() -> void:
-	if not is_instance_valid(_dialog_timer):
+	if not is_instance_valid(_dialog_timer) or not is_inside_tree():
 		return
 	_dialog_timer.stop()
 	var interval = randf_range(interval_min, interval_max)
@@ -116,8 +127,20 @@ func _show_next_dialog() -> void:
 	dialog_label.text = text
 	dialog_label.visible = true
 	
-	await get_tree().create_timer(display_time).timeout
+	# 使用 Timer 代替 await，更安全
+	var hide_timer = Timer.new()
+	hide_timer.one_shot = true
+	hide_timer.wait_time = display_time
+	hide_timer.timeout.connect(_on_dialog_hide_timeout)
+	add_child(hide_timer)
+	hide_timer.start()
+
+func _on_dialog_hide_timeout() -> void:
 	if is_instance_valid(dialog_label):
 		dialog_label.visible = false
+	# 清理定时器
+	var timer = get_tree().current_scene.find_child("Timer", true, false)
+	if timer and timer != _dialog_timer and timer != _check_timer:
+		timer.queue_free()
 	
 	_start_dialog_cycle()

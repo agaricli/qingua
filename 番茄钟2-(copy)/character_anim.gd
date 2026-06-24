@@ -2,6 +2,7 @@ extends Node3D
 
 @onready var anim_tree: AnimationTree = $AnimationTree
 var _playback: AnimationNodeStateMachinePlayback
+var _state_machine: AnimationNodeStateMachine
 
 const IDLE_STATE: String = "idle"
 const WORK_STATES: Array[String] = ["看书", "托腮眨眼", "托腮无表情"]
@@ -20,20 +21,34 @@ var _anim_timer: Timer
 var _timer_version: int = 0
 
 func _ready():
-	# 安全获取状态机，配置错误也不崩溃
-	if anim_tree and anim_tree.has_parameter("playback"):
-		_playback = anim_tree["parameters/playback"]
-		print("✅ 动画状态机加载成功")
-	else:
-		print("❌ 动画树配置错误：找不到 playback 参数，请确认根节点是状态机")
+	# 获取状态机节点（通过 tree_root）
+	var tree_root = anim_tree.tree_root
+	if not tree_root:
+		print("❌ AnimationTree 没有设置 tree_root")
 		return
-	
+	if not (tree_root is AnimationNodeStateMachine):
+		print("❌ tree_root 不是状态机，实际类型：", tree_root.get_class())
+		return
+	_state_machine = tree_root
+	print("✅ 状态机获取成功")
+
+	# 获取播放器
+	_playback = anim_tree.get("parameters/playback")
+	if not _playback:
+		print("❌ 获取 playback 失败")
+		return
+	print("✅ 动画播放器获取成功")
+
 	_anim_timer = Timer.new()
 	_anim_timer.one_shot = true
 	_anim_timer.timeout.connect(_on_anim_cycle_end)
 	add_child(_anim_timer)
-	
+
 	play_idle()
+
+func _exit_tree():
+	if _anim_timer:
+		_anim_timer.stop()
 
 func play_idle() -> void:
 	if not _playback:
@@ -41,46 +56,53 @@ func play_idle() -> void:
 	_is_working = false
 	_anim_timer.stop()
 	_timer_version += 1
-	
-	# 节点存在才切换，避免报错
-	if _playback.has_node(IDLE_STATE):
+
+	# 若状态机有效则检查，否则直接切换
+	if _state_machine and _state_machine.has_node(IDLE_STATE):
 		_playback.travel(IDLE_STATE)
 	else:
-		print("❌ 状态机中找不到 idle 节点，请检查节点名称是否为 ", IDLE_STATE)
+		_playback.travel(IDLE_STATE)
 
 func play_random_work() -> void:
 	if not _playback or WORK_STATES.is_empty():
 		return
-	
+
 	_is_working = true
 	var current = _playback.get_current_node()
 	var target = _pick_different_work_anim(current)
-	
-	if _playback.has_node(target):
+
+	if _state_machine and _state_machine.has_node(target):
 		_playback.travel(target)
-		_restart_anim_timer()
 	else:
-		print("❌ 状态机中找不到工作节点：", target)
+		_playback.travel(target)
+	_restart_anim_timer()
 
 func _pick_different_work_anim(current: String) -> String:
 	if WORK_STATES.size() <= 1:
 		return WORK_STATES[0]
 	var candidates = WORK_STATES.duplicate()
 	candidates.erase(current)
+	if candidates.is_empty():
+		return WORK_STATES[randi() % WORK_STATES.size()]
 	return candidates[randi() % candidates.size()]
 
 func _restart_anim_timer() -> void:
 	_timer_version += 1
 	var my_version = _timer_version
-	
-	await get_tree().process_frame
-	
+	call_deferred("_deferred_start_timer", my_version)
+
+func _deferred_start_timer(my_version: int) -> void:
 	if my_version != _timer_version or not _is_working:
 		return
-	
+	if not _playback:
+		return
+
 	var current_state = _playback.get_current_node()
+	if not WORK_STATES.has(current_state):
+		play_idle()
+		return
+
 	var anim_length = STATE_LENGTH.get(current_state, 2.0)
-	
 	var wait_time = max(anim_length - 0.05, 0.1)
 	_anim_timer.wait_time = wait_time
 	_anim_timer.start()
@@ -88,15 +110,16 @@ func _restart_anim_timer() -> void:
 func _on_anim_cycle_end() -> void:
 	if not _is_working or not _playback:
 		return
-	
+
 	var current = _playback.get_current_node()
 	if not WORK_STATES.has(current):
+		play_idle()
 		return
-	
+
 	if randf() < replay_chance:
 		_playback.travel(current)
 	else:
 		var target = _pick_different_work_anim(current)
 		_playback.travel(target)
-	
+
 	_restart_anim_timer()
