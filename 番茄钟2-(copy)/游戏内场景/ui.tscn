@@ -29,7 +29,7 @@ theme_override_font_sizes/font_size = 64
 
 [node name="ClockTimer" type="Timer" parent="." unique_id=1288778828]
 
-[node name="UI" type="Control" parent="." unique_id=755463712 node_paths=PackedStringArray("dialog_label")]
+[node name="UI" type="Control" parent="." unique_id=755463712 node_paths=PackedStringArray("dialog_label", "tomato_timer")]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -44,6 +44,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("2_tilf5")
 dialog_label = NodePath("DialogBubble/DialogLabel")
+tomato_timer = NodePath("..")
 
 [node name="RestartButton" type="Button" parent="UI" unique_id=114573252]
 layout_mode = 0
