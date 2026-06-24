@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://bahnd27t4irxg"]
+
+[ext_resource type="PackedScene" uid="uid://dulfoefmb8nu8" path="res://场景/叶1.glb" id="2_ek83b"]
+[ext_resource type="PackedScene" uid="uid://b8q6sbn7e37ix" path="res://场景/叶3.glb" id="3_ri5fw"]
+[ext_resource type="PackedScene" uid="uid://h6xpnedt1b8o" path="res://场景/叶2.glb" id="4_ek83b"]
+[ext_resource type="PackedScene" uid="uid://dfynoghq1aycx" path="res://场景/屋子6.21.glb" id="4_x112q"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ek83b"]
+sky_top_color = Color(1, 0.97, 0.97, 1)
+sky_horizon_color = Color(1.4652915, 1.4632219, 1.4294331, 1)
+ground_bottom_color = Color(0.3652006, 0.38692257, 0.25176778, 1)
+ground_horizon_color = Color(1.4652915, 1.4632219, 1.4294331, 1)
+
+[sub_resource type="Sky" id="Sky_ri5fw"]
+sky_material = SubResource("ProceduralSkyMaterial_ek83b")
+
+[sub_resource type="Environment" id="Environment_tc3pe"]
+background_mode = 2
+sky = SubResource("Sky_ri5fw")
+tonemap_mode = 2
+ssao_enabled = true
+sdfgi_enabled = true
+
+[node name="Node3D" type="Node3D" unique_id=1570173232]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=630034927]
+environment = SubResource("Environment_tc3pe")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=1198036134]
+transform = Transform3D(0.98570347, 0.14591618, -0.084244736, 0, 0.49999997, 0.86602545, 0.16848949, -0.8536443, 0.4928517, 0, 0, 0)
+light_energy = 1.45
+shadow_enabled = true
+directional_shadow_max_distance = 111.0
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=888811350]
+transform = Transform3D(0.9940526, 2.1014086e-08, -0.10890164, 0.0091581, 0.9964577, 0.08359518, 0.10851589, -0.08409534, 0.9905313, -0.6929345, 4.359269, 13.113789)
+h_offset = 0.61
+v_offset = -0.065
+fov = 20.9
+
+[node name="叶3" parent="Camera3D" unique_id=2047796220 instance=ExtResource("3_ri5fw")]
+transform = Transform3D(0.9940524, 0.0019081981, 0.108884856, -8.149071e-10, 0.9998464, -0.017522218, -0.10890157, 0.017418005, 0.9938998, 0.028, -5.076, -15.957)
+
+[node name="叶1" parent="Camera3D" unique_id=2068281543 instance=ExtResource("2_ek83b")]
+transform = Transform3D(-0.82031435, 0.56523776, -0.08712574, 0.56908447, 0.8218626, -0.026176939, 0.056809194, -0.07105527, -0.99585295, 0.6390095, -4.678753, 5.3104086)
+
+[node name="叶2" parent="Camera3D" unique_id=1831894781 instance=ExtResource("4_ek83b")]
+transform = Transform3D(0.9964926, 0.0014603796, 0.083665095, 0, 0.99984765, -0.017452404, -0.08367782, 0.017391196, 0.996341, -0.344, -4.65, -14.755)
+
+[node name="屋子6_21" parent="." unique_id=2053031968 instance=ExtResource("4_x112q")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.19, 0, -1.036)

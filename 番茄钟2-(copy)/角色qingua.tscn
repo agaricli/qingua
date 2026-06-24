@@ -1,0 +1,7 @@
+[gd_scene format=3 uid="uid://bycanq1gw4svv"]
+
+[ext_resource type="PackedScene" uid="uid://n5avqpjd2r76" path="res://角色/ren.glb" id="1_mhj3m"]
+
+[node name="Node3D" type="Node3D" unique_id=1301322975]
+
+[node name="ren" parent="." unique_id=654964912 instance=ExtResource("1_mhj3m")]

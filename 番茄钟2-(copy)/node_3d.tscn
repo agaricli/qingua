@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://ctjt23xgn62k8"]
+
+[ext_resource type="PackedScene" uid="uid://bahnd27t4irxg" path="res://游戏内场景/1.tscn" id="1_a202f"]
+[ext_resource type="PackedScene" uid="uid://vqg4bhh2flng" path="res://游戏内场景/ui.tscn" id="2_noarx"]
+[ext_resource type="PackedScene" uid="uid://b2x8rab6a4f7g" path="res://qingua_2.tscn" id="3_a0tk4"]
+
+[node name="Node3D" type="Node3D" unique_id=2009680447]
+
+[node name="Node3D" parent="." unique_id=1570173232 instance=ExtResource("1_a202f")]
+
+[node name="TomatoClock" parent="." unique_id=1277265637 instance=ExtResource("2_noarx")]
+
+[node name="qigua" parent="." unique_id=1404187330 instance=ExtResource("3_a0tk4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.91258717)

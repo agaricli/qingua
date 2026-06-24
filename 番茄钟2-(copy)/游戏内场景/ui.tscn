@@ -1,0 +1,127 @@
+[gd_scene format=3 uid="uid://vqg4bhh2flng"]
+
+[ext_resource type="Script" uid="uid://urmaxufss1nc" path="res://tomato_clock.gd" id="1_fyqef"]
+[ext_resource type="Script" uid="uid://b0fouetnex7p1" path="res://游戏内场景/ui_npc_dialog.gd" id="2_tilf5"]
+
+[node name="TomatoClock" type="Control" unique_id=1277265637]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_fyqef")
+
+[node name="TimeLabel" type="Label" parent="." unique_id=1613822920]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.65500003
+anchor_top = 0.33600003
+anchor_right = 0.65500003
+anchor_bottom = 0.33600003
+offset_left = 80.43994
+offset_top = 16.271988
+offset_right = 120.43994
+offset_bottom = 83.27199
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 64
+
+[node name="ClockTimer" type="Timer" parent="." unique_id=1288778828]
+
+[node name="UI" type="Control" parent="." unique_id=755463712 node_paths=PackedStringArray("dialog_label")]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_tilf5")
+dialog_label = NodePath("DialogBubble/DialogLabel")
+
+[node name="RestartButton" type="Button" parent="UI" unique_id=114573252]
+layout_mode = 0
+offset_left = 216.0
+offset_top = 41.0
+offset_right = 256.0
+offset_bottom = 72.0
+text = "重置"
+
+[node name="TimeOptionsPanel" type="VBoxContainer" parent="UI" unique_id=1747192554]
+layout_mode = 0
+offset_left = 103.0
+offset_top = 85.0
+offset_right = 495.0
+offset_bottom = 225.0
+
+[node name="PresetButtons" type="HBoxContainer" parent="UI/TimeOptionsPanel" unique_id=1219270055]
+layout_mode = 2
+
+[node name="Btn5min" type="Button" parent="UI/TimeOptionsPanel/PresetButtons" unique_id=626590827]
+layout_mode = 2
+text = "五分钟"
+
+[node name="Btn15min" type="Button" parent="UI/TimeOptionsPanel/PresetButtons" unique_id=510180058]
+layout_mode = 2
+text = "十五分钟"
+
+[node name="Btn25min" type="Button" parent="UI/TimeOptionsPanel/PresetButtons" unique_id=1922397876]
+layout_mode = 2
+text = "二十五分钟"
+
+[node name="Btn30min" type="Button" parent="UI/TimeOptionsPanel/PresetButtons" unique_id=1817462443]
+layout_mode = 2
+text = "三十分钟"
+
+[node name="Btn45min" type="Button" parent="UI/TimeOptionsPanel/PresetButtons" unique_id=865263967]
+layout_mode = 2
+text = "四十五分钟"
+
+[node name="CustomInput" type="HBoxContainer" parent="UI/TimeOptionsPanel" unique_id=654200031]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="CustomMinutes" type="LineEdit" parent="UI/TimeOptionsPanel/CustomInput" unique_id=607124642]
+layout_mode = 2
+
+[node name="ApplyButton" type="Button" parent="UI/TimeOptionsPanel/CustomInput" unique_id=760332680]
+layout_mode = 2
+text = "应用"
+
+[node name="DialogBubble" type="PanelContainer" parent="UI" unique_id=1162047273]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = -1.625
+anchor_top = 9.159001
+anchor_right = 0.921875
+anchor_bottom = 9.847
+offset_left = -555.0
+offset_top = -79.360016
+offset_right = 623.125
+offset_bottom = -46.880005
+grow_horizontal = 2
+grow_vertical = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="DialogLabel" type="Label" parent="UI/DialogBubble" unique_id=1436175675]
+custom_minimum_size = Vector2(1280, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 45
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="StartPauseButton" type="Button" parent="UI" unique_id=76739401]
+layout_mode = 0
+offset_left = 342.0
+offset_top = 43.0
+offset_right = 382.0
+offset_bottom = 74.0
+text = "开始"
