@@ -4,11 +4,9 @@ extends Node3D
 var _playback: AnimationNodeStateMachinePlayback
 var _state_machine: AnimationNodeStateMachine
 
-# ========== 【已根据日志修正节点名称】==========
-# 注意：idle 后面有个空格，必须完全匹配
-const IDLE_STATE: String = "idle "
+# 【配置区】确保这里的名字和编辑器里的一模一样（区分大小写和空格）
+const IDLE_STATE: String = "idle"
 const WORK_STATES: Array[String] = ["看书", "托腮眨眼", "托腮无表情"]
-# =============================================
 
 const STATE_LENGTH: Dictionary = {
 	"看书": 4.0,
@@ -20,132 +18,99 @@ const STATE_LENGTH: Dictionary = {
 @export var transition_time: float = 0.1
 
 var _is_working: bool = false
+var _current_state_name: String = "" # 【新增】用变量记录当前状态，比 get_current_node() 更稳
 var _anim_timer: Timer
 var _timer_version: int = 0
 
 func _ready():
 	var tree_root = anim_tree.tree_root
-	if not tree_root:
-		print("❌ AnimationTree 没有设置 tree_root")
-		return
 	if not (tree_root is AnimationNodeStateMachine):
-		print("❌ tree_root 不是状态机，实际类型：", tree_root.get_class())
+		print("❌ 错误：AnimationTree 根节点不是状态机")
 		return
+
 	_state_machine = tree_root
-	print("✅ 状态机获取成功")
-	
-	var all_states = _state_machine.get_node_list()
-	print("📋 状态机中所有节点名称：", all_states)
-
 	_playback = anim_tree.get("parameters/playback")
-	if not _playback:
-		print("❌ 获取 playback 失败")
-		return
-	print("✅ 动画播放器获取成功")
 
+	# 初始化定时器
 	_anim_timer = Timer.new()
 	_anim_timer.one_shot = true
 	_anim_timer.timeout.connect(_on_anim_cycle_end)
 	add_child(_anim_timer)
 
-	play_idle()
+	# 初始状态
+	_switch_to_state(IDLE_STATE)
 
-func _exit_tree():
-	if _anim_timer:
-		_anim_timer.stop()
-
-func play_idle() -> void:
-	if not _playback:
+# 统一的切换函数，避免到处写 travel
+func _switch_to_state(target_state: String) -> void:
+	if not _playback or not _state_machine.has_node(target_state):
+		print("❌ 无法切换到 [", target_state, "]：节点不存在或播放器无效")
 		return
-	_is_working = false
-	_anim_timer.stop()
-	_timer_version += 1
 
-	if _state_machine and _state_machine.has_node(IDLE_STATE):
-		_playback.travel(IDLE_STATE)
-		print("✅ 切换到 idle 状态")
-	else:
-		print("❌ 仍然找不到 idle 节点！当前节点列表：", _state_machine.get_node_list() if _state_machine else "无")
+	print("🔄 正在尝试切换到：", target_state)
+	_playback.travel(target_state)
+	_current_state_name = target_state # 【关键】立即更新内部记录的状态
 
-# ========== 【临时验证版本】注释掉定时器启动 ==========
+# 入口：开始工作循环
 func play_random_work() -> void:
-	print("✅ 角色收到切换工作动画请求")
-	if not _playback or WORK_STATES.is_empty():
-		print("❌ 播放器无效或工作动画列表为空")
-		return
+	if _is_working:
+		return # 防止重复触发
 
 	_is_working = true
-	var current = _playback.get_current_node()
-	print("切换前当前节点：", current)
-	
-	var target = _pick_different_work_anim(current)
-	print("目标切换节点：", target)
-	
-	if _state_machine and not _state_machine.has_node(target):
-		print("❌ 状态机中找不到节点：", target)
-		print("可用节点列表：", _state_machine.get_node_list())
+	_timer_version += 1 # 版本号加1，作废旧的定时器
+
+	# 1. 先切到一个随机的工作动画
+	var first_work = WORK_STATES[randi() % WORK_STATES.size()]
+	_switch_to_state(first_work)
+
+	# 2. 启动第一个定时器
+	_schedule_next_action(first_work, _timer_version)
+
+# 定时器结束时的回调
+func _on_anim_cycle_end() -> void:
+	# 如果版本号变了，说明这是过期的定时器，直接忽略
+	if _timer_version != _anim_timer.get_meta("version", -1):
 		return
 
-	_playback.travel(target)
-	await get_tree().process_frame
-	var after = _playback.get_current_node()
-	print("切换后当前节点：", after)
-	
-	if after == target:
-		print("✅ 节点切换成功")
+	if not _is_working:
+		_switch_to_state(IDLE_STATE)
+		return
+
+	var current = _current_state_name # 使用内部变量，不再依赖 get_current_node()
+
+	# 决定下一步：重播还是换新
+	var next_state: String
+	if randf() < replay_chance:
+		next_state = current # 重播自己
 	else:
-		print("❌ 节点切换失败，仍停留在：", after)
-		print("👉 请检查节点之间是否有过渡连线")
-		print("👉 当前状态 [", after, "] 到目标 [", target, "] 必须有过渡连线")
+		next_state = _pick_different_work_anim(current)
 
-	# ========== 【临时注释】排除定时器干扰 ==========
-	# _restart_anim_timer()   # 先注释掉，只验证切换
-	# ===============================================
-# ===================================================
+	# 执行切换
+	_switch_to_state(next_state)
 
+	# 继续排期下一次
+	_schedule_next_action(next_state, _timer_version)
+
+# 辅助：计算时间并启动定时器
+func _schedule_next_action(state_name: String, version: int) -> void:
+	var duration = STATE_LENGTH.get(state_name, 2.0)
+	# 稍微提前一点点切换，避免动作完全静止的尴尬期
+	var wait_time = max(duration - 0.1, 0.2)
+
+	_anim_timer.wait_time = wait_time
+	_anim_timer.set_meta("version", version) # 给定时器打上版本号标签
+	_anim_timer.start()
+
+# 辅助：随机选一个不同的动画
 func _pick_different_work_anim(current: String) -> String:
-	if WORK_STATES.size() <= 1:
-		return WORK_STATES[0]
 	var candidates = WORK_STATES.duplicate()
 	candidates.erase(current)
 	if candidates.is_empty():
-		return WORK_STATES[randi() % WORK_STATES.size()]
+		return WORK_STATES[0]
 	return candidates[randi() % candidates.size()]
 
-func _restart_anim_timer() -> void:
+# 停止工作，回到待机
+func stop_work():
+	_is_working = false
 	_timer_version += 1
-	var my_version = _timer_version
-	call_deferred("_deferred_start_timer", my_version)
-
-func _deferred_start_timer(my_version: int) -> void:
-	if my_version != _timer_version or not _is_working:
-		return
-	if not _playback:
-		return
-
-	var current_state = _playback.get_current_node()
-	if not WORK_STATES.has(current_state):
-		play_idle()
-		return
-
-	var anim_length = STATE_LENGTH.get(current_state, 2.0)
-	var wait_time = max(anim_length - 0.05, 0.1)
-	_anim_timer.wait_time = wait_time
-	_anim_timer.start()
-
-func _on_anim_cycle_end() -> void:
-	if not _is_working or not _playback:
-		return
-
-	var current = _playback.get_current_node()
-	if not WORK_STATES.has(current):
-		play_idle()
-		return
-
-	if randf() < replay_chance:
-		_playback.travel(current)
-	else:
-		var target = _pick_different_work_anim(current)
-		_playback.travel(target)
-
-	_restart_anim_timer()
+	_anim_timer.stop()
+	_switch_to_state(IDLE_STATE)
