@@ -5,27 +5,27 @@ extends Control
 @export var tomato_timer: Node
 
 @export var idle_dialog_texts: Array[String] = [
-	"休息一下眼睛吧～",
-	"要不要喝口水？",
-	"今天状态不错呀",
-	"累了就歇会儿",
+	"休息一下眼睛吧",
+	"休息也不要刷手机哦",
+	"劳逸逸逸逸逸逸逸逸结合",
+	"多喝水有助于你的记忆",
 	"坐久了站起来活动活动",
 	"加油，专注的你超棒的",
-    "要不要吃点小零食？"
+    "我从不丢掉我的发射（歌唱"
 ]
 
 @export var work_dialog_texts: Array[String] = [
-	"保持专注，继续加油！",
-	"进度很不错哦～",
-	"沉下心来，效率拉满",
-	"再坚持一会儿就休息啦",
-	"认真的样子超棒的",
-	"别走神，继续冲！",
-    "专注时长正在累积中"
+	"看看几点了还走神",
+	"当你看见这句话的时候你已经走神了",
+	"好好学习天天向上",
+	"你也不想你摸鱼的事情被传出去吧（邪恶",
+	"好好学习一会奖励自己吃好吃的",
+	"你要是走神我就要问问你中药药效了，那我问你",
+    "不学习就回家吧！回家吧！"
 ]
 
-@export var interval_min: float = 2.0
-@export var interval_max: float = 4.0
+@export var interval_min: float = 1.0   # 原来 2.0
+@export var interval_max: float = 2.0   # 原来 4.0
 @export var display_time: float = 2.5
 @export var check_interval: float = 0.3
 

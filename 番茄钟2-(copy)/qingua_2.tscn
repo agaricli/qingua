@@ -2,6 +2,9 @@
 
 [ext_resource type="PackedScene" uid="uid://bg2qibdf4mdes" path="res://角色/qingua2.glb" id="1_6n2o8"]
 [ext_resource type="Script" uid="uid://cku2g7ohq728c" path="res://character_anim.gd" id="2_uj14w"]
+[ext_resource type="Script" uid="uid://c6lpclopk1has" path="res://head_look.gd" id="3_qhph0"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_uj14w"]
 
 [sub_resource type="AnimationNodeAdd2" id="AnimationNodeAdd2_77stq"]
 
@@ -128,6 +131,7 @@ xfade_time = 0.89
 xfade_time = 0.89
 
 [sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_qhph0"]
+states/End/position = Vector2(900, 99.690414)
 states/Start/position = Vector2(199.33333, 100)
 states/idle/node = SubResource("AnimationNodeBlendTree_geexj")
 states/idle/position = Vector2(370.33334, 99.81022)
@@ -4217,6 +4221,16 @@ tracks/62/interp = 0
 tracks/62/loop_wrap = true
 tracks/62/keys = PackedFloat32Array(0, 1, -0.13275847, 0.10176493, 9.305979e-10)
 
+[sub_resource type="Animation" id="Animation_qhph0"]
+resource_name = "闭眼睛"
+tracks/0/type = "blend_shape"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("骨架/Skeleton3D/头:眨眼")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = PackedFloat32Array(0.03333333, 1, 1)
+
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_uj14w"]
 _data = {
 &"Armature|Armature|TreadmillRunning_remap": SubResource("Animation_77stq"),
@@ -4227,13 +4241,82 @@ _data = {
 &"托腮右手": SubResource("Animation_rss5i"),
 &"托腮右手_001": SubResource("Animation_blvlf"),
 &"看书": SubResource("Animation_geexj"),
-&"看书_001": SubResource("Animation_6dmii")
+&"看书_001": SubResource("Animation_6dmii"),
+&"闭眼睛": SubResource("Animation_qhph0")
 }
 
 [node name="Character" unique_id=1404187330 instance=ExtResource("1_6n2o8")]
 script = ExtResource("2_uj14w")
 
-[node name="SpringBoneSimulator3D" type="SpringBoneSimulator3D" parent="骨架/Skeleton3D" parent_id_path=PackedInt32Array(963659068) index="4" unique_id=105647234]
+[node name="Skeleton3D" parent="骨架" parent_id_path=PackedInt32Array(1221917519) index="0" unique_id=963659068]
+bones/0/position = Vector3(-7.1054274e-15, 0.9401116, -1.5977157e-21)
+bones/1/rotation = Quaternion(-0.109027, 2.369974e-07, 2.0428104e-14, 0.9940389)
+bones/2/rotation = Quaternion(-0.051297247, -1.1905231e-07, -6.115111e-09, 0.99868345)
+bones/3/rotation = Quaternion(0.11195101, -0.009823124, 0.0012838114, 0.99366444)
+bones/4/rotation = Quaternion(0.0160956, -0.009578389, 0.0025300086, 0.9998214)
+bones/5/position = Vector3(-1.5849061e-09, 0.33423328, -0.4486954)
+bones/5/rotation = Quaternion(0.9996529, 0.002342897, -0.0036008814, -0.025990475)
+bones/6/rotation = Quaternion(0.08902175, -0.0040505067, -0.0018966529, 0.99601966)
+bones/7/rotation = Quaternion(-0.15174168, -0.003945778, -0.00086172274, 0.9884119)
+bones/8/rotation = Quaternion(-0.28814235, -0.003192952, -0.0031318108, 0.9575772)
+bones/9/rotation = Quaternion(0.07035987, 0.09458558, 0.99153095, -0.054493602)
+bones/10/rotation = Quaternion(0.009919501, -4.5397435e-05, 0.09178991, 0.995729)
+bones/11/rotation = Quaternion(-0.008940186, 9.831605e-05, -0.065626584, 0.99780416)
+bones/11/scale = Vector3(1.0000001, 0.9999997, 1)
+bones/13/position = Vector3(-0.3240768, 0.23330766, -0.015460936)
+bones/13/rotation = Quaternion(-0.055934746, 0.03638439, 0.996535, 0.049654864)
+bones/14/rotation = Quaternion(0.06725643, 0.00913482, -0.084613435, 0.9940995)
+bones/15/rotation = Quaternion(0.048688535, 0.010709364, 0.07252728, 0.99611974)
+bones/16/rotation = Quaternion(0.040180642, -0.0016415855, 0.15624888, 0.9868988)
+bones/17/rotation = Quaternion(0.994326, 0.00028522883, -3.0492472e-05, 0.106375776)
+bones/18/rotation = Quaternion(-0.016338218, -6.678424e-06, -0.00042783382, 0.9998665)
+bones/20/rotation = Quaternion(0.991392, -0.053489383, 0.118225165, -0.017425982)
+bones/22/rotation = Quaternion(-0.4080384, -0.51331705, -0.5753739, 0.48883045)
+bones/23/rotation = Quaternion(-0.48579842, -0.15389521, -0.1976125, 0.837416)
+bones/24/rotation = Quaternion(0.066104665, 0.50755674, -0.75577545, 0.4084358)
+bones/25/rotation = Quaternion(0.0044745053, 0.0005143, 0.017903076, 0.9998296)
+bones/26/rotation = Quaternion(0.055659153, 0.2263274, -0.27388796, 0.9330934)
+bones/27/rotation = Quaternion(2.7893113e-06, -7.956986e-07, -1.4062971e-07, 1)
+bones/28/rotation = Quaternion(-4.224479e-06, 5.207257e-07, -2.2118911e-07, 1)
+bones/29/rotation = Quaternion(-0.03214935, -0.00073790736, 0.00662328, 0.9994609)
+bones/30/rotation = Quaternion(8.375209e-07, -2.2852325e-07, -1.95143e-07, 1)
+bones/31/rotation = Quaternion(-3.1750167e-06, 1.2377858e-07, 7.9578975e-08, 1)
+bones/32/position = Vector3(0.053588063, 0.13524307, -0.0061522187)
+bones/32/rotation = Quaternion(-0.03322551, -1.8768998e-05, -0.015222494, 0.99933195)
+bones/33/rotation = Quaternion(1.0803342e-06, -7.380743e-08, 1.65917e-08, 1)
+bones/34/rotation = Quaternion(-6.5611675e-07, -4.5722103e-08, -7.13068e-08, 1)
+bones/35/rotation = Quaternion(-0.03597341, 0.0019033854, 0.041334607, 0.99849576)
+bones/36/rotation = Quaternion(-1.0541235e-06, 1.6488777e-07, -9.626091e-08, 1)
+bones/37/rotation = Quaternion(1.1104157e-06, -1.944645e-07, 1.2530656e-07, 1)
+bones/38/position = Vector3(-0.025, 0.19966787, 0.016077014)
+bones/38/rotation = Quaternion(-0.40803835, 0.5133171, 0.57537395, 0.48883042)
+bones/39/rotation = Quaternion(-0.48579842, 0.1538952, 0.19761243, 0.837416)
+bones/40/rotation = Quaternion(0.19883718, -0.385356, 0.81448716, 0.38545462)
+bones/41/rotation = Quaternion(-0.24827568, 0.077372156, 0.0306567, 0.96510774)
+bones/42/rotation = Quaternion(0.055659156, -0.22632745, 0.27388796, 0.9330934)
+bones/43/rotation = Quaternion(2.7902427e-06, 7.934867e-07, 1.4808029e-07, 1)
+bones/44/rotation = Quaternion(-4.2170286e-06, -5.078036e-07, 2.1792943e-07, 1)
+bones/45/rotation = Quaternion(-0.08394836, 0.014265627, -0.00029218942, 0.99636793)
+bones/46/rotation = Quaternion(-0.051963933, 0.012976337, 0.0067040357, 0.99854213)
+bones/47/rotation = Quaternion(-0.051967945, 0.012975958, 0.006703844, 0.99854195)
+bones/48/rotation = Quaternion(-0.09609972, 0.005631881, 0.014609549, 0.99524856)
+bones/49/rotation = Quaternion(-0.062881336, 0.0065869656, -0.00036505234, 0.9979992)
+bones/50/rotation = Quaternion(-0.06288308, 0.00658694, -0.00036495432, 0.9979991)
+bones/51/rotation = Quaternion(-0.10040861, 0.012536448, -0.033211984, 0.9943128)
+bones/52/rotation = Quaternion(-0.06507121, 0.011454381, 0.0085796965, 0.997778)
+bones/53/rotation = Quaternion(-0.065069064, 0.011454756, 0.008579476, 0.9977782)
+bones/54/rotation = Quaternion(0.9635714, 2.500134e-08, -1.12827976e-07, 0.26745108)
+bones/55/rotation = Quaternion(0.20081253, -1.4989389e-09, -7.929931e-09, 0.9796297)
+bones/58/rotation = Quaternion(0.96357155, 2.5001311e-08, -1.12828e-07, 0.26745075)
+bones/59/rotation = Quaternion(0.20081186, -1.498939e-09, -7.9299065e-09, 0.9796299)
+bones/61/rotation = Quaternion(-3.6818978e-08, 0.97412884, -0.22599348, -7.354467e-08)
+bones/62/position = Vector3(0.13275847, 0.10176493, 9.305978e-10)
+bones/63/position = Vector3(-0.13275847, 0.10176493, 9.305978e-10)
+
+[node name="头" parent="骨架/Skeleton3D" index="0" unique_id=342114148]
+"blend_shapes/右看" = 1.0
+
+[node name="SpringBoneSimulator3D" type="SpringBoneSimulator3D" parent="骨架/Skeleton3D" index="4" unique_id=105647234]
 transform = Transform3D(0.57791483, 0, 0, 0, 0.57791483, 0, 0, 0, 0.57791483, 0, 0, 0)
 setting_count = 5
 settings/0/root_bone_name = "fair.007.R"
@@ -4366,7 +4449,7 @@ settings/4/joints/3/bone = 8
 settings/4/enable_all_child_collisions = true
 settings/4/exclude_collision_count = 0
 
-[node name="SpringBoneSimulator3D2" type="SpringBoneSimulator3D" parent="骨架/Skeleton3D" parent_id_path=PackedInt32Array(963659068) index="5" unique_id=2047320923]
+[node name="SpringBoneSimulator3D2" type="SpringBoneSimulator3D" parent="骨架/Skeleton3D" index="5" unique_id=2047320923]
 transform = Transform3D(0.57791483, 0, 0, 0, 0.57791483, 0, 0, 0, 0.57791483, 0, 0, 0)
 setting_count = 5
 settings/0/root_bone_name = "fair.007.R"
@@ -4499,7 +4582,7 @@ settings/4/joints/3/bone = 8
 settings/4/enable_all_child_collisions = true
 settings/4/exclude_collision_count = 0
 
-[node name="SpringBoneSimulator3D3" type="SpringBoneSimulator3D" parent="骨架/Skeleton3D" parent_id_path=PackedInt32Array(963659068) index="6" unique_id=1375717038]
+[node name="SpringBoneSimulator3D3" type="SpringBoneSimulator3D" parent="骨架/Skeleton3D" index="6" unique_id=1375717038]
 transform = Transform3D(0.57791483, 0, 0, 0, 0.57791483, 0, 0, 0, 0.57791483, 0, 0, 0)
 setting_count = 5
 settings/0/root_bone_name = "fair.007.R"
@@ -4631,6 +4714,19 @@ settings/4/joints/3/bone_name = "fair.005"
 settings/4/joints/3/bone = 8
 settings/4/enable_all_child_collisions = true
 settings/4/exclude_collision_count = 0
+
+[node name="BoneAttachment3D" type="BoneAttachment3D" parent="骨架/Skeleton3D" index="7" unique_id=2121762705]
+transform = Transform3D(0.9992153, -0.010732785, -0.038135875, 4.656613e-10, 0.9626044, -0.27091098, 0.03961739, 0.2706983, 0.9618489, -0.00028412812, 1.5663536, 0.09320632)
+bone_name = "head"
+bone_idx = 4
+
+[node name="HeadArea" type="Area3D" parent="骨架/Skeleton3D/BoneAttachment3D" index="0" unique_id=393049156]
+transform = Transform3D(0.9999996, 3.4101523e-14, -3.011735e-14, 1.3359666e-14, 0.9988144, -0.04867698, -2.7804344e-14, 0.048676938, 0.9988143, -2.7617377e-14, -1.563596, -0.099473305)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="骨架/Skeleton3D/BoneAttachment3D/HeadArea" index="0" unique_id=1817233617]
+transform = Transform3D(1.89, -6.7155807e-22, 0, 6.7155807e-22, 1.89, 0, 0, 0, 1.89, 0.025580013, 1.944611, 1.86607e-09)
+shape = SubResource("SphereShape3D_uj14w")
+debug_color = Color(1.1551381e-06, 0.60525316, 0.670738, 0.41960785)
 
 [node name="AnimationTree" type="AnimationTree" parent="." index="1" unique_id=2045731230]
 tree_root = SubResource("AnimationNodeStateMachine_qhph0")
@@ -4643,3 +4739,15 @@ parameters/idle/Add2/add_amount = 1.0
 
 [node name="AnimationPlayer" parent="." index="2" unique_id=1172848071]
 libraries/ = SubResource("AnimationLibrary_uj14w")
+
+[node name="HeadLookControl" type="Node3D" parent="." index="3" unique_id=1454519791 node_paths=PackedStringArray("skeleton", "head_attach", "mesh_instance")]
+script = ExtResource("3_qhph0")
+skeleton = NodePath("../骨架/Skeleton3D")
+head_bone_name = "head"
+head_attach = NodePath("../骨架/Skeleton3D/BoneAttachment3D")
+mesh_instance = NodePath("../骨架/Skeleton3D/头")
+trigger_radius = 280.0
+smooth_speed = 24.495
+pet_offset = Vector2(0, -150)
+yaw_intensity = 1.7
+pitch_intensity = 1.23
