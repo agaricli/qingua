@@ -172,9 +172,15 @@ func _process(delta: float) -> void:
 	pose.basis = pose.basis * rot
 	skeleton.set_bone_global_pose_override(_bone_idx, pose, 1.0, false)
 	
-	# ========== 5. 应用闭眼形态键 ==========
+	# ========== 5. 应用闭眼形态键（✅ 叠加模式 - 不覆盖动画） ==========
 	if _blend_idx != -1 and mesh_instance and mesh_instance.mesh:
-		mesh_instance.set_blend_shape_value(_blend_idx, _current_eye_close)
+		# 获取其他系统（如动画）设置的眨眼值
+		var anim_blink_value = mesh_instance.get_blend_shape_value(_blend_idx)
+		
+		# 抚摸闭眼值与其他闭眼值取最大，互不覆盖
+		var final_value = max(anim_blink_value, _current_eye_close)
+		
+		mesh_instance.set_blend_shape_value(_blend_idx, final_value)
 
 # ========== 开始抚摸 ==========
 func _start_petting():
