@@ -1,199 +1,315 @@
-extends Control
+extends Node
 
-@export var work_minutes: int = 25
-var total_seconds: int = 0
-var remaining_seconds: int = 0
-var is_running: bool = false
+# ========== 信号 ==========
+signal time_updated(time_string: String)
+signal timer_finished()
+signal state_changed(is_running: bool)
 
-# 倒计时数字UI
-@onready var time_label: Label = $TimeLabel
-@onready var clock_timer: Timer = $ClockTimer
-@onready var restart_button: Button = $UI/RestartButton
-@onready var start_pause_button: Button = $UI/StartPauseButton
+# ========== 导出变量 ==========
+@export var default_minutes: int = 25
+@export var time_label: Label
 
-# 时间选项UI控件
-@onready var btn_5min: Button = $UI/TimeOptionsPanel/PresetButtons/Btn5min
-@onready var btn_15min: Button = $UI/TimeOptionsPanel/PresetButtons/Btn15min
-@onready var btn_25min: Button = $UI/TimeOptionsPanel/PresetButtons/Btn25min
-@onready var btn_30min: Button = $UI/TimeOptionsPanel/PresetButtons/Btn30min
-@onready var btn_45min: Button = $UI/TimeOptionsPanel/PresetButtons/Btn45min
-@onready var custom_minutes_input: LineEdit = $UI/TimeOptionsPanel/CustomInput/CustomMinutes
-@onready var apply_button: Button = $UI/TimeOptionsPanel/CustomInput/ApplyButton
+# ========== 按钮引用 ==========
+@export var start_pause_button: Button
+@export var restart_button: Button
+@export var btn_5min: Button
+@export var btn_15min: Button
+@export var btn_25min: Button
+@export var btn_30min: Button
+@export var btn_45min: Button
+@export var apply_button: Button
+@export var custom_minute_input: LineEdit
 
-var current_selected_button: Button = null
+# ========== 私有变量 ==========
+var _time_left: float = 0.0
+var _is_running: bool = false
+var _is_paused: bool = false
+var _timer: Timer
 
-# ==================== 角色动画控制器引用 ====================
-@onready var character: Node3D = get_node_or_null("../qigua")
-# =========================================================
+# ========== 属性访问器 ==========
+var time_left: float:
+	get: return _time_left
 
+var is_running: bool:
+	get: return _is_running
+
+# ========== 初始化 ==========
 func _ready():
-	total_seconds = work_minutes * 60
-	remaining_seconds = total_seconds
-	is_running = false
+	_timer = Timer.new()
+	_timer.wait_time = 0.1
+	_timer.timeout.connect(_on_timer_timeout)
+	add_child(_timer)
 	
-	clock_timer.wait_time = 1.0
-	clock_timer.timeout.connect(_on_timer_tick)
+	set_time(default_minutes)
+	_update_display()
 	
-	restart_button.pressed.connect(restart_clock)
-	start_pause_button.pressed.connect(start_pause_clock)
+	_connect_buttons()
 	
-	btn_5min.pressed.connect(func(): set_time(5))
-	btn_15min.pressed.connect(func(): set_time(15))
-	btn_25min.pressed.connect(func(): set_time(25))
-	btn_30min.pressed.connect(func(): set_time(30))
-	btn_45min.pressed.connect(func(): set_time(45))
-	apply_button.pressed.connect(apply_custom_time)
+	# 初始状态：待机
+	if SignalBus.instance:
+		SignalBus.instance.anim_play_idle.emit()
+		print("🎬 初始：发送待机信号")
 	
-	custom_minutes_input.text_changed.connect(validate_numeric_input)
-	
-	update_time_display()
-	start_pause_button.text = "开始"
-	highlight_button(btn_25min)
+	print("✅ TomatoClock 初始化完成，默认时间：", default_minutes, " 分钟")
 
-	# 初始播放idle
-	if character and character.has_method("play_idle"):
-		character.play_idle()
-
-func _on_timer_tick():
-	if is_running and remaining_seconds > 0:
-		remaining_seconds -= 1
-		update_time_display()
-		
-		if remaining_seconds <= 0:
-			is_running = false
-			time_label.text = "时间到！"
-			clock_timer.stop()
-			start_pause_button.text = "开始"
-			start_pause_button.disabled = false
-			if character and character.has_method("play_idle"):
-				character.play_idle()
-
-func update_time_display():
-	var minutes: int = remaining_seconds / 60
-	var seconds: int = remaining_seconds % 60
-	time_label.text = "%02d:%02d" % [minutes, seconds]
-
-func restart_clock():
-	remaining_seconds = total_seconds
-	is_running = false
-	update_time_display()
+# ========== 连接按钮信号 ==========
+func _connect_buttons():
+	if start_pause_button:
+		start_pause_button.pressed.connect(_on_start_pause_pressed)
+		print("✅ 开始/暂停按钮已连接")
 	
-	if not clock_timer.is_stopped():
-		clock_timer.stop()
+	if restart_button:
+		restart_button.pressed.connect(_on_restart_pressed)
+		print("✅ 重置按钮已连接")
 	
-	start_pause_button.text = "开始"
-	start_pause_button.disabled = false
+	if btn_5min:
+		btn_5min.pressed.connect(func(): set_time(5); _update_display())
+		print("✅ 5分钟按钮已连接")
+	if btn_15min:
+		btn_15min.pressed.connect(func(): set_time(15); _update_display())
+		print("✅ 15分钟按钮已连接")
+	if btn_25min:
+		btn_25min.pressed.connect(func(): set_time(25); _update_display())
+		print("✅ 25分钟按钮已连接")
+	if btn_30min:
+		btn_30min.pressed.connect(func(): set_time(30); _update_display())
+		print("✅ 30分钟按钮已连接")
+	if btn_45min:
+		btn_45min.pressed.connect(func(): set_time(45); _update_display())
+		print("✅ 45分钟按钮已连接")
 	
-	if character and character.has_method("play_idle"):
-		character.play_idle()
+	if apply_button and custom_minute_input:
+		apply_button.pressed.connect(_on_apply_pressed)
+		print("✅ 自定义时间按钮已连接")
 
-func start_pause_clock():
-	# 若剩余时间≤0，则重启并直接开始
-	if remaining_seconds <= 0:
-		restart_clock()
-		is_running = true
-		clock_timer.start()
-		start_pause_button.text = "暂停"
-		if character and character.has_method("play_random_work"):
-			character.play_random_work()
-		return
-	
-	if is_running:
-		# 暂停
-		is_running = false
-		clock_timer.stop()
-		start_pause_button.text = "开始"
-		if character and character.has_method("play_idle"):
-			character.play_idle()
+# ========== 按钮回调 ==========
+func _on_start_pause_pressed():
+	print("🔄 开始/暂停按钮被点击")
+	if _is_running and not _is_paused:
+		# 正在运行 → 暂停
+		pause()
+		if start_pause_button:
+			start_pause_button.text = "继续"
+	elif _is_running and _is_paused:
+		# 暂停中 → 继续
+		resume()
+		if start_pause_button:
+			start_pause_button.text = "暂停"
 	else:
-		# 开始计时（混合了第二个片段的调试打印）
-		is_running = true
-		clock_timer.start()
-		start_pause_button.text = "暂停"
-		# 👇 新增调试打印
-		print("开始计时，角色节点是否有效：", is_instance_valid(character))
-		if character:
-			character.play_random_work()
-		else:
-			print("❌ 未获取到角色节点，路径错误")
+		# 未开始 → 开始
+		start()
+		if start_pause_button:
+			start_pause_button.text = "暂停"
 
-# ========== 时间设置功能 ==========
+func _on_restart_pressed():
+	print("🔄 重置按钮被点击")
+	reset()
+	if start_pause_button:
+		start_pause_button.text = "开始"
+
+func _on_apply_pressed():
+	if custom_minute_input:
+		var text = custom_minute_input.text
+		var minutes = int(text)
+		if minutes > 0:
+			set_time(minutes)
+			_update_display()
+			if start_pause_button:
+				start_pause_button.text = "开始"
+			print("✅ 自定义时间已设置：", minutes, " 分钟")
+
+# ========== 核心功能 ==========
+
 func set_time(minutes: int):
-	minutes = clamp(minutes, 1, 180)
-	
-	if minutes == work_minutes and remaining_seconds == total_seconds:
-		return
-	
-	work_minutes = minutes
-	total_seconds = work_minutes * 60
-	
-	var was_running = is_running
-	if was_running:
-		is_running = false
-		clock_timer.stop()
-	
-	remaining_seconds = total_seconds
-	update_time_display()
-	
-	if was_running:
-		is_running = true
-		clock_timer.start()
-		start_pause_button.text = "暂停"
-		if character and character.has_method("play_random_work"):
-			character.play_random_work()
-	else:
+	_time_left = float(minutes * 60)
+	_update_display()
+	if start_pause_button:
 		start_pause_button.text = "开始"
-		start_pause_button.disabled = false
-		if character and character.has_method("play_idle"):
-			character.play_idle()
-	
-	highlight_preset_button(minutes)
+	print("⏰ 设置时间：", minutes, " 分钟")
 
-func apply_custom_time():
-	var input_text = custom_minutes_input.text.strip_edges()
-	if input_text.is_empty():
+func start():
+	print("▶️ start() 被调用")
+	if _time_left <= 0:
+		print("⚠️ 时间已归零，请先设置时间")
 		return
 	
-	if not input_text.is_valid_int():
-		custom_minutes_input.text = ""
+	_is_running = true
+	_is_paused = false
+	_timer.start()
+	state_changed.emit(true)
+	
+	# 切换到工作动画
+	if SignalBus.instance:
+		SignalBus.instance.anim_play_work.emit()
+		print("🎬 发送工作动画信号")
+	
+	print("▶️ 计时开始")
+
+func pause():
+	if not _is_running:
 		return
 	
-	var minutes = input_text.to_int()
-	minutes = clamp(minutes, 1, 180)
-	set_time(minutes)
-	custom_minutes_input.text = str(minutes)
-
-func validate_numeric_input(new_text: String):
-	var filtered = ""
-	for ch in new_text:
-		if ch.is_valid_int():
-			filtered += ch
+	_is_paused = true
+	_timer.stop()
 	
-	if filtered != new_text:
-		custom_minutes_input.text = filtered
-		custom_minutes_input.caret_column = filtered.length()
+	# ✅ 暂停时切换到待机动画
+	if SignalBus.instance:
+		SignalBus.instance.anim_play_idle.emit()
+		print("🎬 暂停：切换到待机动画")
+	
+	print("⏸️ 计时暂停")
 
-func highlight_preset_button(minutes: int) -> bool:
-	var button_map = {
-		5: btn_5min,
-		15: btn_15min,
-		25: btn_25min,
-		30: btn_30min,
-		45: btn_45min
-	}
-	if button_map.has(minutes):
-		highlight_button(button_map[minutes])
-		return true
-	else:
-		clear_button_highlight()
-		return false
+func resume():
+	if not _is_running or not _is_paused:
+		return
+	
+	_is_paused = false
+	_timer.start()
+	
+	# ✅ 继续时切换到工作动画
+	if SignalBus.instance:
+		SignalBus.instance.anim_play_work.emit()
+		print("🎬 继续：切换到工作动画")
+	
+	print("▶️ 计时继续")
 
-func highlight_button(button: Button):
-	clear_button_highlight()
-	current_selected_button = button
-	button.add_theme_color_override("font_color", Color(1, 1, 0))
+func stop():
+	print("⏹️ stop() 被调用")
+	_is_running = false
+	_is_paused = false
+	_timer.stop()
+	state_changed.emit(false)
+	if start_pause_button:
+		start_pause_button.text = "开始"
+	
+	# 回到待机动画
+	if SignalBus.instance:
+		SignalBus.instance.anim_play_idle.emit()
+		print("🎬 发送待机信号")
+	
+	print("⏹️ 计时停止")
 
-func clear_button_highlight():
-	if current_selected_button and is_instance_valid(current_selected_button):
-		current_selected_button.remove_theme_color_override("font_color")
-	current_selected_button = null
+func reset():
+	print("🔄 reset() 被调用")
+	stop()
+	set_time(default_minutes)
+	_update_display()
+	if start_pause_button:
+		start_pause_button.text = "开始"
+	
+	if SignalBus.instance:
+		SignalBus.instance.anim_play_idle.emit()
+	
+	print("🔄 计时重置")
+
+# ========== 私有方法 ==========
+
+func _on_timer_timeout():
+	if not _is_running or _is_paused:
+		return
+	
+	_time_left -= 0.1
+	
+	if _time_left <= 0:
+		_time_left = 0
+		_update_display()
+		_timer.stop()
+		_is_running = false
+		state_changed.emit(false)
+		timer_finished.emit()
+		if start_pause_button:
+			start_pause_button.text = "开始"
+		
+		if SignalBus.instance:
+			SignalBus.instance.anim_play_idle.emit()
+			print("🎬 计时结束，发送待机信号")
+		
+		print("🔔 计时结束！")
+		return
+	
+	if int(_time_left) != int(_time_left + 0.1):
+		_update_display()
+
+func _update_display():
+	if not time_label:
+		return
+	
+	var seconds = int(_time_left)
+	var minutes = seconds / 60
+	var secs = seconds % 60
+	var time_string = "%02d:%02d" % [minutes, secs]
+	
+	time_label.text = time_string
+	time_updated.emit(time_string)
+
+# ========== 公共方法 ==========
+
+func get_time_string() -> String:
+	var seconds = int(_time_left)
+	var minutes = seconds / 60
+	var secs = seconds % 60
+	return "%02d:%02d" % [minutes, secs]
+
+func get_seconds() -> int:
+	return int(_time_left)
+
+func get_minutes() -> float:
+	return _time_left / 60.0
+
+func is_active() -> bool:
+	return _is_running and not _is_paused
+
+# ========== 快捷功能 ==========
+
+func set_5min():
+	set_time(5)
+
+func set_15min():
+	set_time(15)
+
+func set_25min():
+	set_time(25)
+
+func set_30min():
+	set_time(30)
+
+func set_45min():
+	set_time(45)
+
+func set_custom(minutes: int):
+	if minutes > 0:
+		set_time(minutes)
+
+# ========== 编辑器中显示属性 ==========
+func _get_property_list():
+	return [
+		{
+			"name": "TimeLeft",
+			"type": TYPE_FLOAT,
+			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY
+		},
+		{
+			"name": "IsRunning",
+			"type": TYPE_BOOL,
+			"usage": PROPERTY_USAGE_EDITOR | PROPERTY_USAGE_READ_ONLY
+		}
+	]
+
+func _get(property: StringName) -> Variant:
+	match property:
+		"TimeLeft":
+			return _time_left
+		"IsRunning":
+			return _is_running
+	return null
+
+func _set(property: StringName, value: Variant) -> bool:
+	match property:
+		"TimeLeft":
+			_time_left = float(value)
+			_update_display()
+			return true
+		"IsRunning":
+			_is_running = bool(value)
+			return true
+	return false

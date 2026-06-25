@@ -1,5 +1,6 @@
 extends Node3D
 
+# ========== 编辑器参数 ==========
 @export var skeleton: Skeleton3D
 @export var head_bone_name: String = "头"
 @export var head_attach: BoneAttachment3D
@@ -16,16 +17,15 @@ extends Node3D
 @export var yaw_intensity: float = 1.0
 @export var pitch_intensity: float = 0.5
 
-# ✅ 闭眼参数（形态键名称改为"眨眼"）
-@export var eye_blend_name: String = "眨眼"  # 改成"眨眼"
+# 闭眼参数
+@export var eye_blend_name: String = "眨眼"
 @export var eye_close_amount: float = 1.0
 @export var eye_close_speed: float = 4.0
 
-# 手动测试开关
-@export var test_eye_close: float = 0.0
-
 var _bone_idx: int = -1
 var _is_petting: bool = false
+var _is_mouse_down: bool = false
+var _is_hovering: bool = false
 var _pet_timer: float = 0.0
 var _target_transition: float = 0.0
 var _current_transition: float = 0.0
@@ -38,6 +38,8 @@ var _current_pitch: float = 0.0
 var _target_eye_close: float = 0.0
 var _current_eye_close: float = 0.0
 var _blend_idx: int = -1
+
+var _speak_cooldown: float = 0.0
 
 @onready var _camera: Camera3D
 
@@ -58,54 +60,39 @@ func _ready():
 		push_error("❌ head_attach 未赋值")
 		return
 	
-	# 如果 mesh_instance 没赋值，自动查找
 	if not mesh_instance:
-		print("🔍 自动查找头部网格...")
 		mesh_instance = find_head_mesh()
-		
-		if mesh_instance:
-			print("✅ 找到头部网格：", mesh_instance.name)
-		else:
-			push_error("❌ 找不到头部网格，请手动拖拽")
-			return
 	
-	# ========== 形态键调试 ==========
-	print("========== 形态键调试 ==========")
+	if mesh_instance and mesh_instance.mesh:
+		var mesh = mesh_instance.mesh
+		for i in range(mesh.get_blend_shape_count()):
+			var name = mesh.get_blend_shape_name(i)
+			if name == eye_blend_name:
+				_blend_idx = i
+				print("✅ 找到形态键：", name)
+				break
 	
-	if not mesh_instance:
-		push_error("❌ mesh_instance 为空")
-		return
+	if not SignalBus.instance:
+		push_error("❌ SignalBus 未初始化！请检查 AutoLoad 设置")
 	
-	if not mesh_instance.mesh:
-		push_error("❌ mesh_instance 没有 Mesh")
-		return
-	
-	print("网格名称：", mesh_instance.name)
-	
-	var mesh = mesh_instance.mesh
-	var count = mesh.get_blend_shape_count()
-	print("形态键数量：", count)
-	
-	if count == 0:
-		push_error("❌ 这个网格没有任何形态键！")
-		return
-	
-	print("形态键列表：")
-	for i in range(count):
-		var name = mesh.get_blend_shape_name(i)
-		print("  [", i, "] ", name)
-		
-		# ✅ 匹配"眨眼"
-		if name == eye_blend_name:
-			_blend_idx = i
-			print("✅ 找到匹配的形态键：", name)
-	
-	if _blend_idx == -1:
-		print("⚠️ 没有找到 '", eye_blend_name, "'")
-		print("请从上面的列表中选择正确的名称")
-	
-	print("====================================")
-	print("✅ 头部抚摸系统已初始化")
+	print("✅ 头部抚摸系统已初始化（鼠标按下触发）")
+
+# ========== ✅ 使用 _input 处理鼠标事件 ==========
+func _input(event: InputEvent):
+	# 鼠标左键按下
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				_is_mouse_down = true
+				print("🖱️ 鼠标按下")
+				# 检查是否在头部区域
+				_check_petting_state()
+			else:
+				_is_mouse_down = false
+				print("🖱️ 鼠标抬起")
+				# 鼠标抬起时停止抚摸
+				if _is_petting:
+					_stop_petting()
 
 func find_head_mesh() -> MeshInstance3D:
 	if head_attach:
@@ -116,11 +103,6 @@ func find_head_mesh() -> MeshInstance3D:
 
 func _process(delta: float) -> void:
 	if _bone_idx == -1 or not head_attach:
-		return
-	
-	# 手动测试闭眼
-	if test_eye_close > 0 and _blend_idx != -1 and mesh_instance and mesh_instance.mesh:
-		mesh_instance.set_blend_shape_value(_blend_idx, test_eye_close)
 		return
 	
 	# ========== 1. 检测鼠标位置 ==========
@@ -137,26 +119,27 @@ func _process(delta: float) -> void:
 	
 	var is_hovering = distance < trigger_radius
 	
-	# ========== 2. 抚摸状态机 ==========
-	if is_hovering and not _is_petting:
-		_is_petting = true
-		_pet_timer = 0.0
-		_target_transition = 1.0
-		_target_eye_close = eye_close_amount
-		print("✅ 抚摸开始！闭眼")
-	elif not is_hovering and _is_petting:
-		_pet_timer += delta
-		if _pet_timer > pet_duration:
-			_is_petting = false
-			_target_transition = 0.0
-			_target_eye_close = 0.0
-			print("✅ 抚摸结束，睁眼")
+	_is_hovering = is_hovering
 	
-	# 过渡插值
-	_current_transition = move_toward(_current_transition, _target_transition, delta / transition_time)
-	var strength = _current_transition
+	# ✅ 如果鼠标移出头部区域，停止抚摸
+	if _is_petting and not _is_hovering:
+		print("🚫 鼠标移出头部区域，停止抚摸")
+		_stop_petting()
+		return
 	
-	if strength > 0.01:
+	# ========== 2. 抚摸状态机（鼠标按下 + 悬停） ==========
+	if _is_mouse_down and _is_hovering and not _is_petting:
+		_start_petting()
+	
+	# ========== 3. 处理抚摸中的逻辑 ==========
+	if _is_petting:
+		_speak_cooldown += delta
+		if _speak_cooldown >= 2.0:
+			if randf() < 0.2:
+				if SignalBus.instance:
+					SignalBus.instance.pet_dialog_triggered.emit("")
+				_speak_cooldown = 0.0
+		
 		var target_yaw = x_rel * max_angle * yaw_intensity
 		var target_pitch = head_down_angle + y_rel * max_angle * pitch_intensity
 		
@@ -164,22 +147,23 @@ func _process(delta: float) -> void:
 			target_yaw = 0.0
 			target_pitch = head_down_angle * 1.5
 		
-		_target_yaw = target_yaw * strength
-		_target_pitch = target_pitch * strength
+		_target_yaw = target_yaw * _current_transition
+		_target_pitch = target_pitch * _current_transition
+		
+		_current_transition = move_toward(_current_transition, 1.0, delta / transition_time)
 	else:
 		_target_yaw = 0.0
 		_target_pitch = 0.0
+		_current_transition = move_toward(_current_transition, 0.0, delta / transition_time)
 	
-	# 平滑插值（头部旋转）
 	var smooth_factor = 1.0 - exp(-smooth_speed * delta)
 	_current_yaw = lerp(_current_yaw, _target_yaw, smooth_factor)
 	_current_pitch = lerp(_current_pitch, _target_pitch, smooth_factor)
 	
-	# 平滑插值（闭眼）
 	var eye_smooth_factor = 1.0 - exp(-eye_close_speed * delta)
 	_current_eye_close = lerp(_current_eye_close, _target_eye_close, eye_smooth_factor)
 	
-	# ========== 3. 应用头部旋转 ==========
+	# ========== 4. 应用头部旋转 ==========
 	var rot = Basis.IDENTITY
 	rot = rot.rotated(Vector3.UP, _current_yaw)
 	rot = rot.rotated(rot.x, _current_pitch)
@@ -188,6 +172,44 @@ func _process(delta: float) -> void:
 	pose.basis = pose.basis * rot
 	skeleton.set_bone_global_pose_override(_bone_idx, pose, 1.0, false)
 	
-	# ========== 4. 应用闭眼形态键 ==========
+	# ========== 5. 应用闭眼形态键 ==========
 	if _blend_idx != -1 and mesh_instance and mesh_instance.mesh:
 		mesh_instance.set_blend_shape_value(_blend_idx, _current_eye_close)
+
+# ========== 开始抚摸 ==========
+func _start_petting():
+	if _is_petting:
+		return
+	
+	_is_petting = true
+	_pet_timer = 0.0
+	_target_transition = 1.0
+	_target_eye_close = eye_close_amount
+	_speak_cooldown = 0.0
+	
+	if SignalBus.instance:
+		SignalBus.instance.petting_started.emit()
+		SignalBus.instance.pet_dialog_triggered.emit("")
+	
+	print("✅ 抚摸开始！（鼠标按下）")
+
+# ========== 停止抚摸 ==========
+func _stop_petting():
+	if not _is_petting:
+		return
+	
+	_is_petting = false
+	_target_transition = 0.0
+	_target_eye_close = 0.0
+	
+	if SignalBus.instance:
+		SignalBus.instance.petting_ended.emit()
+	
+	print("✅ 抚摸结束（鼠标抬起/移出）")
+
+func _check_petting_state():
+	if _is_mouse_down and _is_hovering and not _is_petting:
+		_start_petting()
+
+func is_petting() -> bool:
+	return _is_petting

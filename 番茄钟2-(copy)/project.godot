@@ -10,10 +10,13 @@ config_version=5
 
 [application]
 
-config/name="番茄钟2 (Copy)"
 run/main_scene="uid://ctjt23xgn62k8"
 config/features=PackedStringArray("4.6", "Mobile")
 config/icon="res://icon.svg"
+
+[autoload]
+
+SignalBus="*uid://b6j07sf00c5bt"
 
 [display]
 
