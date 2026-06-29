@@ -1,9 +1,11 @@
 extends Control
 
 @export var dialog_label: Label
-@export var character_node: Node3D
 @export var tomato_timer: Node
 @export var time_label: Label
+
+# ✅ 新增：Typewriter 引用
+@export var typewriter: Typewriter
 
 @export var idle_dialog_texts: Array[String] = [
 	"休息一下眼睛吧",
@@ -39,17 +41,35 @@ extends Control
 @export var check_interval: float = 0.3
 @export var pet_display_time: float = 2.5
 
+# ✅ 角色状态管理（不再依赖外部节点）
+enum CharacterState {
+	IDLE,
+	WORK,
+	PET
+}
+
+var _current_state: CharacterState = CharacterState.IDLE
+var _is_timing: bool = false  # 番茄钟是否在计时
+var _is_petting: bool = false  # 是否在抚摸
+
 var _dialog_timer: Timer
 var _check_timer: Timer
-var _is_timing: bool = false
-var _current_dialog_type: String = "idle"
-var _is_petting: bool = false
 var _signals_connected: bool = false
+var _current_hide_timer: Timer = null
 
 func _ready():
 	if not dialog_label:
 		print("❌ 错误：dialog_label 未绑定")
 		return
+	
+	# ✅ 自动查找 Typewriter
+	if not typewriter:
+		typewriter = get_node_or_null("Typewriter")
+		if typewriter:
+			typewriter.typing_finished.connect(_on_typing_finished)
+			print("✅ Typewriter 已连接")
+		else:
+			print("⚠️ 未找到 Typewriter 节点，将使用普通显示模式")
 	
 	dialog_label.visible = false
 	
@@ -131,10 +151,37 @@ func _connect_signals():
 		SignalBus.instance.petting_started.connect(_on_petting_started)
 		SignalBus.instance.petting_ended.connect(_on_petting_ended)
 		SignalBus.instance.pet_dialog_triggered.connect(_on_pet_dialog_triggered)
+		SignalBus.instance.anim_play_idle.connect(_on_state_changed_idle)
+		SignalBus.instance.anim_play_work.connect(_on_state_changed_work)
 		_signals_connected = true
 		print("✅ 已连接到信号总线")
 	else:
 		print("⚠️ SignalBus 未找到")
+
+# ========== ✅ 角色状态切换回调 ==========
+func _on_state_changed_idle():
+	_set_state(CharacterState.IDLE)
+	print("🔄 角色状态：待机")
+
+func _on_state_changed_work():
+	_set_state(CharacterState.WORK)
+	print("🔄 角色状态：工作中")
+
+func _set_state(new_state: CharacterState):
+	if _current_state == new_state:
+		return
+	
+	_current_state = new_state
+	
+	# ✅ 如果正在打字或抚摸，不立即切换对话
+	if _is_petting or (typewriter and typewriter.is_typing()):
+		print("⏸️ 打字或抚摸中，延迟切换对话")
+		return
+	
+	# 切换状态时刷新对话
+	_stop_dialog()
+	_show_next_dialog()
+	_start_dialog_cycle()
 
 func _on_dialog_timer_timeout():
 	_show_next_dialog()
@@ -144,9 +191,9 @@ func _start_dialog_cycle() -> void:
 		return
 	_dialog_timer.stop()
 	
-	# ✅ 如果正在抚摸，不启动普通对话循环
-	if _is_petting:
-		print("⏸️ 抚摸中，暂停普通对话循环")
+	# ✅ 如果正在抚摸或正在打字，不启动普通对话循环
+	if _is_petting or (typewriter and typewriter.is_typing()):
+		print("⏸️ 抚摸中或打字中，暂停普通对话循环")
 		return
 	
 	var interval = randf_range(interval_min, interval_max)
@@ -156,63 +203,104 @@ func _start_dialog_cycle() -> void:
 func _stop_dialog() -> void:
 	if is_instance_valid(_dialog_timer):
 		_dialog_timer.stop()
+	
+	if typewriter and typewriter.is_typing():
+		typewriter.stop()
+	
 	if dialog_label:
 		dialog_label.visible = false
+		dialog_label.text = ""
+	
+	if _current_hide_timer and is_instance_valid(_current_hide_timer):
+		_current_hide_timer.queue_free()
+		_current_hide_timer = null
+
+func _on_typing_finished():
+	print("✅ 打字完成")
+	_start_hide_timer(display_time, "_on_dialog_hide_timeout")
+
+func _start_hide_timer(wait_time: float, callback: String) -> void:
+	if _current_hide_timer and is_instance_valid(_current_hide_timer):
+		_current_hide_timer.queue_free()
+		_current_hide_timer = null
+	
+	_current_hide_timer = Timer.new()
+	_current_hide_timer.one_shot = true
+	_current_hide_timer.wait_time = wait_time
+	_current_hide_timer.timeout.connect(Callable(self, callback))
+	add_child(_current_hide_timer)
+	_current_hide_timer.start()
+
+func _show_dialog_text(text: String) -> void:
+	if not dialog_label:
+		return
+	
+	if typewriter:
+		if typewriter.is_typing():
+			typewriter.stop()
+		
+		dialog_label.visible = true
+		typewriter.type_text(text)
+	else:
+		dialog_label.text = text
+		dialog_label.visible = true
+		_start_hide_timer(display_time, "_on_dialog_hide_timeout")
+
+# ========== ✅ 根据当前状态获取对话列表 ==========
+func _get_dialog_list_by_state() -> Array[String]:
+	if _current_state == CharacterState.WORK:
+		return work_dialog_texts
+	elif _current_state == CharacterState.PET:
+		return pet_dialog_texts
+	else:
+		return idle_dialog_texts
 
 func _show_next_dialog() -> void:
 	if not dialog_label:
 		return
 	
-	# ✅ 如果正在抚摸，只显示抚摸对话
-	if _is_petting:
-		print("⏭️ 抚摸中，跳过普通对话")
+	if _is_petting or (typewriter and typewriter.is_typing()):
+		print("⏭️ 抚摸中或打字中，跳过普通对话")
 		_start_dialog_cycle()
 		return
 	
-	# ✅ 如果当前是抚摸对话类型，跳过
-	if _current_dialog_type == "pet":
+	if _current_state == CharacterState.PET:
 		_start_dialog_cycle()
 		return
 	
-	var text_list = idle_dialog_texts if not _is_timing else work_dialog_texts
+	var text_list = _get_dialog_list_by_state()
 	if text_list.is_empty():
 		return
 	
 	var text = text_list[randi() % text_list.size()]
-	dialog_label.text = text
-	dialog_label.visible = true
-	_current_dialog_type = "idle" if not _is_timing else "work"
-	
-	var hide_timer = Timer.new()
-	hide_timer.one_shot = true
-	hide_timer.wait_time = display_time
-	hide_timer.timeout.connect(_on_dialog_hide_timeout)
-	add_child(hide_timer)
-	hide_timer.start()
+	_show_dialog_text(text)
 
 func _on_dialog_hide_timeout() -> void:
 	if is_instance_valid(dialog_label):
 		dialog_label.visible = false
-		_current_dialog_type = "idle"
+		dialog_label.text = ""
 	
-	var timers = get_children().filter(func(t): return t is Timer and t != _dialog_timer and t != _check_timer)
-	for t in timers:
-		t.queue_free()
+	if _current_hide_timer and is_instance_valid(_current_hide_timer):
+		_current_hide_timer.queue_free()
+		_current_hide_timer = null
 	
 	_start_dialog_cycle()
 
 # ========== 抚摸相关 ==========
 func _on_petting_started():
 	_is_petting = true
+	_set_state(CharacterState.PET)
 	_stop_dialog()
 	_show_pet_dialog()
 	print("🐱 抚摸触发对话")
 
 func _on_petting_ended():
 	_is_petting = false
-	# ✅ 抚摸结束后，重置对话类型，启动普通对话
-	_current_dialog_type = "idle"
-	_start_dialog_cycle()
+	# ✅ 抚摸结束后，根据番茄钟状态恢复状态
+	if _is_timing:
+		_set_state(CharacterState.WORK)
+	else:
+		_set_state(CharacterState.IDLE)
 	print("🐱 抚摸结束，恢复普通对话")
 
 func _on_pet_dialog_triggered(message: String):
@@ -225,44 +313,28 @@ func _show_pet_dialog() -> void:
 	if not dialog_label or pet_dialog_texts.is_empty():
 		return
 	
-	var text = pet_dialog_texts[randi() % pet_dialog_texts.size()]
-	dialog_label.text = text
-	dialog_label.visible = true
-	_current_dialog_type = "pet"
+	if typewriter and typewriter.is_typing():
+		typewriter.stop()
 	
-	var hide_timer = Timer.new()
-	hide_timer.one_shot = true
-	hide_timer.wait_time = pet_display_time
-	hide_timer.timeout.connect(_on_pet_dialog_hide_timeout)
-	add_child(hide_timer)
-	hide_timer.start()
+	var text = pet_dialog_texts[randi() % pet_dialog_texts.size()]
+	_show_dialog_text(text)
 
 func _show_specific_dialog(message: String):
 	if not dialog_label:
 		return
 	
 	_stop_dialog()
-	dialog_label.text = message
-	dialog_label.visible = true
-	_current_dialog_type = "pet"
-	
-	var hide_timer = Timer.new()
-	hide_timer.one_shot = true
-	hide_timer.wait_time = pet_display_time
-	hide_timer.timeout.connect(_on_pet_dialog_hide_timeout)
-	add_child(hide_timer)
-	hide_timer.start()
+	_show_dialog_text(message)
 
 func _on_pet_dialog_hide_timeout() -> void:
 	if is_instance_valid(dialog_label):
 		dialog_label.visible = false
-		_current_dialog_type = "idle"
+		dialog_label.text = ""
 	
-	var timers = get_children().filter(func(t): return t is Timer and t != _dialog_timer and t != _check_timer)
-	for t in timers:
-		t.queue_free()
+	if _current_hide_timer and is_instance_valid(_current_hide_timer):
+		_current_hide_timer.queue_free()
+		_current_hide_timer = null
 	
-	# ✅ 抚摸对话结束后，如果还在抚摸中，继续显示下一条抚摸对话
 	if _is_petting:
 		print("🐱 继续显示下一条抚摸对话")
 		_show_pet_dialog()
@@ -282,15 +354,26 @@ func _check_tomato_state() -> void:
 	
 	if now_timing != _is_timing:
 		_is_timing = now_timing
-		print("🔄 对话切换 -> ", "计时台词" if _is_timing else "待机台词")
+		print("🔄 番茄钟切换 -> ", "计时中" if _is_timing else "待机")
 		
 		_update_time_display()
 		
-		# ✅ 如果正在抚摸，不切换对话
-		if _is_petting:
-			print("⏸️ 抚摸中，不切换对话")
+		if _is_petting or (typewriter and typewriter.is_typing()):
+			print("⏸️ 抚摸中或打字中，不切换状态")
 			return
 		
-		_stop_dialog()
-		_show_next_dialog()
-		_start_dialog_cycle()
+		# ✅ 根据番茄钟状态切换角色状态
+		if _is_timing:
+			_set_state(CharacterState.WORK)
+		else:
+			_set_state(CharacterState.IDLE)
+
+# ========== ✅ 公共方法：外部可以调用切换状态 ==========
+func switch_to_idle():
+	_set_state(CharacterState.IDLE)
+
+func switch_to_work():
+	_set_state(CharacterState.WORK)
+
+func switch_to_pet():
+	_set_state(CharacterState.PET)
