@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://urmaxufss1nc" path="res://tomato_clock.gd" id="1_fyqef"]
 [ext_resource type="Script" uid="uid://b0fouetnex7p1" path="res://游戏内场景/ui_npc_dialog.gd" id="2_tilf5"]
+[ext_resource type="Script" uid="uid://dbkccfbv8k5o2" path="res://脚本/VoiceSystem.gd" id="3_de2w6"]
 [ext_resource type="Script" uid="uid://clwaw2pnq66cg" path="res://脚本/Typewriter.gd" id="3_iy06r"]
 
 [node name="TomatoClock" type="Control" unique_id=1277265637 node_paths=PackedStringArray("time_label", "start_pause_button", "restart_button", "btn_5min", "btn_15min", "btn_25min", "btn_30min", "btn_45min", "apply_button", "custom_minute_input")]
@@ -132,9 +133,14 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="Typewriter" type="Node" parent="UI/DialogBubble" unique_id=647316370 node_paths=PackedStringArray("label")]
+[node name="Typewriter" type="Node" parent="UI/DialogBubble" unique_id=647316370 node_paths=PackedStringArray("label", "voice_system")]
 script = ExtResource("3_iy06r")
 label = NodePath("../DialogLabel")
+voice_system = NodePath("../VoiceSystem")
+
+[node name="VoiceSystem" type="Node" parent="UI/DialogBubble" unique_id=2114967649]
+script = ExtResource("3_de2w6")
+metadata/_custom_type_script = "uid://dbkccfbv8k5o2"
 
 [node name="StartPauseButton" type="Button" parent="UI" unique_id=76739401]
 layout_mode = 0

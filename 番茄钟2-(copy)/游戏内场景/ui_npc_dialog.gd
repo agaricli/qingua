@@ -5,7 +5,7 @@ extends Control
 @export var time_label: Label
 
 # ✅ 新增：Typewriter 引用
-@export var typewriter: Typewriter
+@export var typewriter: DialogTypewriter
 
 @export var idle_dialog_texts: Array[String] = [
 	"休息一下眼睛吧",
